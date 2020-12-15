@@ -5,6 +5,17 @@ class Variable:
     def __init__(self, data):
         self.data = data
         self.grad = None
+        self.creator = None
+        
+    def set_creator(self, func):
+        self.creator = func
+        
+    def backward(self):
+        f = self.creator
+        if f is not None:
+            x = f.input
+            x.grad = f.backward(self.grad)
+            x.backward()
         
         
 #step 2
@@ -13,7 +24,10 @@ class Function:
         x = input.data
         y = self.forward(x)
         output = Variable(y)
+        output.set_creator(self)
+        # print(output.creator)
         self.input = input
+        self.output = output
         return output
     
     def forward(self, x):
@@ -59,11 +73,37 @@ x = Variable(np.array(0.5))
 a = A(x)
 b = B(a)
 y = C(b)
+print(y.data)
+
+assert y.creator == C
+assert y.creator.input == b
+assert b.creator == B
+assert y.creator.input.creator == B
+assert y.creator.input.creator.input == a
+assert a.creator == A
+assert y.creator.input.creator.input.creator == A
+assert y.creator.input.creator.input.creator.input == x
+
+# y.grad = np.array(1.0)
+# b.grad = C.backward(y.grad)
+# a.grad = B.backward(b.grad)
+# x.grad = A.backward(a.grad)
+# print(x.grad)
+
+# y.grad = np.array(1.0)
+# C = y.creator
+# b = C.input
+# b.grad = C.backward(y.grad)
+# B = b.creator
+# a = B.input
+# a.grad = B.backward(b.grad)
+# A = a.creator
+# x = A.input
+# x.grad = A.backward(a.grad)
+# print(x.grad)
 
 y.grad = np.array(1.0)
-b.grad = C.backward(y.grad)
-a.grad = B.backward(b.grad)
-x.grad = A.backward(a.grad)
+y.backward()
 print(x.grad)
 
 # step4
